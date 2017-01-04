@@ -3,6 +3,7 @@
 //
 #include <memory>
 #include <unordered_set>
+#include <stack>
 #include <functional>
 #include <string>
 #include "list.cpp"
@@ -10,80 +11,14 @@
 // Among the dependency of assets, it's impossible to have circle. So DAG should be proper way to store such structure.
 using namespace std;
 
-using ll=int64_t;
+using ll = int64_t;
 
-//class DAG {
-//  public:
-//    // the node type will used for list, so override several type of operations is a must.
-//    class Node{
-//      public:
-//        Asset& value;
-//        unique_ptr<List<Node>> connected;
-//        Node(Asset& asset): value(asset) {
-//          this->connected = make_unique<List<Node>>();
-//        }
-//        inline bool operator == (const Node &node) const{
-//          return this->value == node.value;
-//        }
-//        string getName() {
-//          return this->value.getName();
-//        }
-//    };
-//    DAG(): count(0), nodes(new List<Node>()) {
-//    }
-//
-//    DAG(shared_ptr<Asset> &asset) {
-//      auto node = new Node(*asset);
-//      this->nodes = new List<Node>(*node);
-//      this->count = 1;
-//    }
-//    void connect(Asset &fromAsset, Asset &toAsset) {
-//      auto source = new Node(fromAsset);
-//      auto dist = new Node(toAsset);
-//      Node *from = this->nodes->find(*source);
-//      Node *to = this->nodes->find(*dist);
-//      if(from  == nullptr) {
-//        this->nodes->append(*source);
-//        from = source;
-//      }
-//      if(to == nullptr) {
-//        this->nodes->append(*dist);
-//        to = dist;
-//      }
-//      from->connected.get()->append(*to);
-//    }
-//
-//    string toString(){
-//      auto head = this->nodes->getHead();
-//      string print = "";
-//      while(head){
-//        string line = "";
-//        auto list = &head->data;
-//        line += list->value.getName();
-//        line += "  ";
-//        auto listHead = list->connected.get()->getHead();
-//
-//        while(listHead) {
-//          line += listHead->data.getName();
-//          line += "  ";
-//          listHead = listHead->_next.get();
-//        }
-//
-//        line += "\n";
-//        print += line;
-//        head = head->_next.get();
-//      }
-//
-//      return print;
-//    };
-//  protected:
-//    ll count;
-//    List<Node>* nodes;
-//};
 class DAG {
 public:
     // the node type will used for list, so override several type of operations is a must.
     class Node{
+    private:
+        mutable bool usable;
     public:
         struct nodeHash {
             std::hash<std::string> h;
@@ -96,15 +31,44 @@ public:
             bool operator()(const Node& a, const Node& b) const { return a == b; }
         };
         Asset& value;
+        void evaluateUsableWhenChange(const Node &node) const {
+          this->updateUsable(usable && node.usable);
+        }
+        void updateUsable(bool canUse) const {
+          if(canUse == usable) return;
+          // dfs update usable
+//          auto nodePair = ;
+//          [this]{ this->usable = this->usable && canUse; return this; };
+          auto toRefresh = stack<pair<const Node&, bool>>();
+          toRefresh.push({ *this, canUse });
+          while(toRefresh.size() != 0) {
+            auto &node = toRefresh.top();
+            toRefresh.pop();
+            node.first.usable = node.first.usable && node.second;
+            for(auto &toAdd : *node.first.connected) {
+              toRefresh.push({toAdd, node.first.usable});
+            }
+          }
+        }
+        // it is connecting to other Nodes    this -> other
+        shared_ptr<unordered_set<Node, nodeHash, nodeEqual>> connecting;
+        // it is connected to other Nodes     this <- other
         shared_ptr<unordered_set<Node, nodeHash, nodeEqual>> connected;
         Node(Asset& asset): value(asset) {
+          this->connecting = make_shared<unordered_set<Node, nodeHash, nodeEqual>>();
           this->connected = make_shared<unordered_set<Node, nodeHash, nodeEqual>>();
+          this->usable = this->value.isAvailable();
         }
         inline bool operator == (const Node &node) const{
           return this->value == node.value;
         }
         string getName() const {
           return this->value.getName();
+        }
+        string toJson() const {
+          char json[1000];
+          sprintf(json, "{\"id\"\:\"%s\"}", this->getName().c_str());
+          return json;
         }
     };
     DAG(): count(0) {
@@ -132,16 +96,17 @@ public:
       } else {
         dist = make_shared<Node>(*to);
       }
-      source->connected->insert(*dist);
+      source->connecting->insert(*dist);
+      dist->connected->insert(*source);
+      source->evaluateUsableWhenChange(*dist);
     }
-
-    string toString(){
+    string print(){
       string print = "";
       for(auto& head : *this->nodes) {
         string line = "[";
         line += head.getName();
         line += "] ";
-        for(auto &node: *head.connected){
+        for(auto &node: *head.connecting){
           line += node.getName();
           line += "  ";
         }
@@ -150,6 +115,44 @@ public:
       }
       return print;
     };
+    string toJson(){
+      string print = "{";
+      for(auto& head : *this->nodes) {
+        string line = "\"";
+        line += head.getName();
+        line += "\":[";
+        for(auto &node: *head.connecting){
+          line += node.toJson() + ",";
+        }
+        line += "],\n";
+        print += line;
+      }
+      print += "}";
+      return print;
+    }
+    bool remove(Asset &asset) {
+      Node const *$node = nullptr;
+      bool flag = false;
+      for(auto &node : *this->nodes) {
+        if(node.value == asset) {
+          $node = &node;
+          flag = true;
+          this->nodes->erase(node);
+        }
+        if($node != nullptr) {
+          node.connecting->erase(*$node);
+        }
+      }
+      return flag;
+    }
+    void updateUsable(Asset &asset) {
+      for(auto &node : *this->nodes) {
+        if(node.value == asset) {
+          node.updateUsable(asset.isAvailable());
+          return;
+        }
+      }
+    }
 protected:
     ll count;
     unique_ptr<unordered_set<Node, Node::nodeHash, Node::nodeEqual>> nodes;

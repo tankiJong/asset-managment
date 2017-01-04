@@ -21,6 +21,13 @@ string int2str(const int &i) {
 string int2str(const int &&i) {
   return int2str(i);
 }
+
+// delete or re-add asset
+void updateAssetAvailableStatus(string name, bool isAvailable, DAG dag) {
+  auto asset = Asset::setDeleteStatusTo(name, isAvailable);
+  dag.updateUsable(*asset);
+}
+
 int _main(){
   FILE *fp;
   if((fp=fopen("resource.txt","w"))==NULL) exit(1);
@@ -64,7 +71,8 @@ int main(){
 //  for (int i = 0; i < 10000; ++i) {
 //    dag->connect(*(Asset::get(int2str(i))), *(Asset::get(int2str(i-2))));
 //  }
-  std::cout << dag->toString() << std::endl;
+  std::cout << dag->toJson() << std::endl;
   printf("time spend: %lf", num);
+  fclose(fp);
   return 0;
 }
