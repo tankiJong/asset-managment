@@ -6,7 +6,7 @@
 #include <stack>
 #include <functional>
 #include <string>
-#include "list.cpp"
+#include <set>
 #include "asset.cpp"
 // Among the dependency of assets, it's impossible to have circle. So DAG should be proper way to store such structure.
 using namespace std;
@@ -66,8 +66,8 @@ public:
           return this->value.getName();
         }
         string toJson() const {
-          char json[1000];
-          sprintf(json, "{\"id\"\:\"%s\"}", this->getName().c_str());
+          char json[100];
+          sprintf(json, "{\"id\":\"%s\"}", this->getName().c_str());
           return json;
         }
     };
@@ -102,21 +102,26 @@ public:
     }
     string print(){
       string print = "";
+      set<string> sortedLines;
       for(auto& head : *this->nodes) {
         string line = "[";
         line += head.getName();
-        line += "] ";
+        line += "] \t";
         for(auto &node: *head.connecting){
           line += node.getName();
           line += "  ";
         }
         line += "\n";
+//        print += line;
+        sortedLines.insert(line);
+      }
+      for(auto &line : sortedLines) {
         print += line;
       }
       return print;
     };
-    string toJson(){
-      string print = "{";
+    string* toJson(){
+      auto print = new string("{");
       for(auto& head : *this->nodes) {
         string line = "\"";
         line += head.getName();
@@ -125,9 +130,9 @@ public:
           line += node.toJson() + ",";
         }
         line += "],\n";
-        print += line;
+        *print += line;
       }
-      print += "}";
+      *print += "}";
       return print;
     }
     bool remove(Asset &asset) {
