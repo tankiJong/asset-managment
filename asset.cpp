@@ -8,17 +8,18 @@ class Asset {
   protected:
     static unordered_map<string, shared_ptr<Asset>> map;
     string name;
-    bool isDeleted = false;
+    bool available = true;
     Asset(){};
   public:
     Asset(string name): name(name){};
-    static shared_ptr<Asset> get(string name) {
+    static shared_ptr<Asset> get(string name, bool force = true) {
       if (name.length() == 0) return nullptr;
       auto it = Asset::map.find(name);
       if (it ==  Asset::map.end()) {
-          auto asset = Asset::buildSharedPtr(name);
-          Asset::map.insert({name, asset});
-          return asset;
+        if(!force) return shared_ptr<Asset>(nullptr);
+        auto asset = Asset::buildSharedPtr(name);
+        Asset::map.insert({name, asset});
+        return asset;
       }
       return it->second;
     }
@@ -31,22 +32,21 @@ class Asset {
     inline string getName() const{
       return this->name;
     }
-
-    static shared_ptr<Asset> setDeleteStatusTo(string name, bool status) {
+    static shared_ptr<Asset> setAvailableStatusTo(string name, bool status) {
       if (name.length() == 0) return nullptr;
       auto it = Asset::map.find(name);
       if (it ==  Asset::map.end()) return nullptr;
-      it->second->isDeleted = status;
+      it->second->available = status;
       return it->second;
     }
 
     bool setDeleteStatusTo(bool status) {
-      this->isDeleted = status;
+      this->available = status;
       return true;
     }
 
     bool isAvailable() {
-      return !this->isDeleted;
+      return this->available;
     }
     inline bool operator == (const Asset &asset) const{
       return this->name == asset.name;
