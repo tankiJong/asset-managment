@@ -83,9 +83,13 @@ int main(){
 //  auto server = Server::get(4545);
   std::cout << dag->print() << std::endl;
   dag->visualize("foo.png");
-  while(scanf("%s", a) != EOF) {
+  while(scanf("%s %s", a, b) != EOF) {
     if(!strcmp(a, "q")) return 0;
-    updateAssetAvailableStatus(a, false, *dag);
+    if(!strcmp(a, "enable")) {
+      updateAssetAvailableStatus(b, true, *dag);
+    } else if(!strcmp(a, "disable")) {
+      updateAssetAvailableStatus(b, false, *dag);
+    }
 //    auto asset = Asset::setAvailableStatusTo(a, false);
 //    if(asset.get() == nullptr) {
 //      printf("asset of such name don't exist.\n");
@@ -94,6 +98,7 @@ int main(){
 //    dag->updateUsable(*asset);
     std::cout << dag->print() << std::endl;
     dag->visualize("foo.png");
+    std::cout << "=> export to foo.png" << std::endl;
   }
 //  server.onReceive([](string data){
 //      std::cout << "received: " << data << "\n" << std::endl;
@@ -104,11 +109,11 @@ int main(){
   return 0;
 }
 
-#define MIN_PER_RANK 20 /* Nodes/Rank: How 'fat' the DAG should be.  */
-#define MAX_PER_RANK 50
-#define MIN_RANKS 3    /* Ranks: How 'tall' the DAG should be.  */
-#define MAX_RANKS 5
-#define PERCENT 10     /* Chance of having an Edge.  */
+#define MIN_PER_RANK 5 /* Nodes/Rank: How 'fat' the DAG should be.  */
+#define MAX_PER_RANK 5
+#define MIN_RANKS 20    /* Ranks: How 'tall' the DAG should be.  */
+#define MAX_RANKS 50
+#define PERCENT 5     /* Chance of having an Edge.  */
 
 // http://www.graphviz.org/doc/Dot.ref
 string generateRandomGraph (void) {
@@ -118,7 +123,7 @@ string generateRandomGraph (void) {
   int ranks = MIN_RANKS
               + (rand () % (MAX_RANKS - MIN_RANKS + 1));
 
-  string re = "digraph {ranksep=5;splines=true;radio=auto; ";
+  string re = "digraph {ranksep=8;splines=true;radio=auto; ";
   string foo = "";
   for (i = 0; i < ranks; i++)
   {

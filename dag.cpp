@@ -3,8 +3,7 @@
 //
 #include <memory>
 #include <unordered_set>
-#include <stack>
-#include <functional>
+#include <queue>
 #include <string>
 #include <set>
 #include "asset.cpp"
@@ -43,14 +42,21 @@ public:
           // dfs update usable
 //          auto nodePair = ;
 //          [this]{ this->usable = this->usable && canUse; return this; };
-          auto toRefresh = stack<pair<const Node&, bool>>();
+          auto toRefresh = queue<pair<const Node&, bool>>();
           toRefresh.push({ *this, canUse });
           while(toRefresh.size() != 0) {
-            auto &top = toRefresh.top();
+            auto &top = toRefresh.front();
             auto node = top;
             toRefresh.pop();
+            if(node.first.usable) {
+              node.first.usable = node.first.usable && node.first.value.isAvailable() && node.second;
+            } else if(!node.first.usable) {
+              // if usable is false, it is too strong to reverse it, so have no idea but to detect all nodes
+              bool isUsable = true;
+              for(auto &cc: *node.first.connecting) isUsable = cc->usable && cc->value.isAvailable() && isUsable;
+              node.first.usable = isUsable;
+            }
             printf("%s -> %s\n", node.first.getName().c_str(), (node.first.usable && node.second) ? "✅" : "❌");
-            node.first.usable = node.first.usable && node.second;
             for(auto toAdd : *node.first.connected) {
               toRefresh.push({*toAdd, node.first.usable});
             }
