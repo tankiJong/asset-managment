@@ -12,6 +12,9 @@ class Asset {
     Asset(){};
   public:
     Asset(string name): name(name){};
+    static void reserve(int64_t amount) {
+      map.reserve(amount);
+    }
     static shared_ptr<Asset> get(string name, bool force = true) {
       if (name.length() == 0) return nullptr;
       auto it = Asset::map.find(name);
@@ -23,7 +26,7 @@ class Asset {
       }
       return it->second;
     }
-    static shared_ptr<Asset> buildSharedPtr(string name){
+    static shared_ptr<Asset> buildSharedPtr(string name) {
       struct makeShared : public Asset {
           public: makeShared(string name): Asset(name){};
       };
@@ -49,7 +52,7 @@ class Asset {
       return this->available;
     }
     inline bool operator == (const Asset &asset) const{
-      return this->name == asset.name;
+      return !strcmp(this->name.c_str(), asset.name.c_str());
     }
 };
 

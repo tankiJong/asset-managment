@@ -4,11 +4,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
-#include <time.h>
+//#include <time.h>
 #include <sstream>
 #include <random>
 #include "dag.cpp"
+#include <vector>
 #include <gvc.h>
+#include <math.h>
 using namespace std;
 //
 //void storeToMap(hash_map<string, unique_ptr<Asset>> &mp, Asset &asset){
@@ -31,19 +33,10 @@ void updateAssetAvailableStatus(string name, bool isAvailable, DAG &dag) {
   dag.updateUsable(*asset);
 }
 
-int generateAGraph(){
+int exportToFile(const char* str){
   FILE *fp;
   if((fp=fopen("resource.txt","w"))==NULL) exit(1);
-  std::cout << "Hello, World!" << std::endl;
-  // auto dag = new DAG();
-  random_device rd;
-  double max = rd.max();
-  double min = rd.min();
-  for (int64_t i = 0; i < 2 * 25; ++i) {
-    fprintf(fp, "%lld %lld\n", int64_t((max - rd()) / (max - min) * 10), int64_t((max - rd()) / (max - min) * 10));
-    // dag->connect(*(Asset::get(int2str(i))), *(Asset::get(int2str(i+1))));
-    // dag->connect(*(Asset::get(int2str(i))), *(Asset::get(int2str(i+2))));
-  }
+  fprintf(fp, "%s", str);
   std::cout << "done" << std::endl;
   fclose(fp);
 //  for (int i = 0; i < 10000; ++i) {
@@ -60,29 +53,33 @@ int main(){
     exit(1);
   }
   std::cout << "Hello, World!" << std::endl;
-  char a[10], b[10];
-  auto dag = new DAG();
+  char a[100], b[100];
   time_t time1,time2;
   time(&time1);
+  auto toProcess = vector<pair<string, string>>();
   while(!feof(fp)){
     fscanf(fp, "%s %s", a, b);
-    // printf("%s %s\n", a, b);
-    // Asset aas(a);
-    // Asset bas(b);
-    // Asset::get(a);
-    // Asset::get(b);
-    dag->connect(*(Asset::get(a)), *(Asset::get(b)));
-    // dag->connect(*new Asset(a), *new Asset(b));
+    toProcess.push_back({a , b});
+  }
+//  auto dag = new DAG(10000);
+  auto dag = new DAG(sqrt(toProcess.size()));
+  Asset::reserve(toProcess.size());
+  for(auto &p: toProcess) {
+    dag->connect(*(Asset::get(p.first)), *(Asset::get(p.second)));
+//    Asset::get(p.first);
+//    Asset::get(p.second);
   }
   time(&time2);
   double num = difftime(time2,time1);
-//  for (int i = 0; i < 10000; ++i) {
-//    dag->connect(*(Asset::get(int2str(i))), *(Asset::get(int2str(i-2))));
-//  }
-//  std::cout << "ok\n" << std::endl;
-//  auto server = Server::get(4545);
-  std::cout << dag->print() << std::endl;
-  dag->visualize("foo.png");
+  time(&time1);
+  std::cout << "ok " << num << "\n " << toProcess.size() << std::endl;
+  std::cout << dag->out() << std::endl;
+  std::cout << "ok " << num << "\n " << toProcess.size() << std::endl;
+  time(&time2);
+  num = difftime(time2,time1);
+  std::cout << "ok " << num << "\n " << toProcess.size() << std::endl;
+  dag->visualize("foo.svg");
+  std::cout << "svg ok" << std::endl;
   while(scanf("%s %s", a, b) != EOF) {
     if(!strcmp(a, "q")) return 0;
     if(!strcmp(a, "enable")) {
@@ -90,30 +87,20 @@ int main(){
     } else if(!strcmp(a, "disable")) {
       updateAssetAvailableStatus(b, false, *dag);
     }
-//    auto asset = Asset::setAvailableStatusTo(a, false);
-//    if(asset.get() == nullptr) {
-//      printf("asset of such name don't exist.\n");
-//      continue;
-//    }
-//    dag->updateUsable(*asset);
-    std::cout << dag->print() << std::endl;
-    dag->visualize("foo.png");
-    std::cout << "=> export to foo.png" << std::endl;
+    std::cout << dag->out() << std::endl;
+//     dag->visualize("foo.png");
+//     std::cout << "=> export to foo.png" << std::endl;
   }
-//  server.onReceive([](string data){
-//      std::cout << "received: " << data << "\n" << std::endl;
-//  });
-//  std::cout << dag->toJson() << std::endl;
 
   fclose(fp);
   return 0;
 }
 
-#define MIN_PER_RANK 5 /* Nodes/Rank: How 'fat' the DAG should be.  */
-#define MAX_PER_RANK 5
-#define MIN_RANKS 20    /* Ranks: How 'tall' the DAG should be.  */
-#define MAX_RANKS 50
-#define PERCENT 5     /* Chance of having an Edge.  */
+#define MIN_PER_RANK 100 /* Nodes/Rank: How 'fat' the DAG should be.  */
+#define MAX_PER_RANK 100
+#define MIN_RANKS 100    /* Ranks: How 'tall' the DAG should be.  */
+#define MAX_RANKS 100
+#define PERCENT 1     /* Chance of having an Edge.  */
 
 // http://www.graphviz.org/doc/Dot.ref
 string generateRandomGraph (void) {
@@ -145,20 +132,21 @@ string generateRandomGraph (void) {
     nodes += new_nodes; /* Accumulate into old node set.  */
   }
   re += "}\0";
+  exportToFile(foo.c_str());
   printf("%s", foo.c_str());
   return re;
 }
 
 
 // http://www.graphviz.org/doc/libguide/libguide.pdf
-int testDrawer(){
+int $main(){
 //  const char *str = graph.c_str();
   string str = generateRandomGraph();
   GVC_t* gvc = gvContext();
   Agraph_t* g = agmemread(str.c_str());
   gvLayout(gvc, g, "twopi");
 
-  gvRenderFilename(gvc, g, "png", "foo.png");
+  gvRenderFilename(gvc, g, "svg", "foo.svg");
   gvFreeLayout(gvc, g);
 
   agclose(g);

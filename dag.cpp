@@ -12,7 +12,7 @@
 using namespace std;
 
 using ll = int64_t;
-
+static char print[104857600];
 class DAG {
 public:
     // the node type will used for list, so override several type of operations is a must.
@@ -66,9 +66,24 @@ public:
         shared_ptr<unordered_set<Node*, nodeHash, nodeEqual>> connecting;
         // it is connected to other Nodes     this <- other
         shared_ptr<unordered_set<Node*, nodeHash, nodeEqual>> connected;
-        Node(Asset& asset): value(asset) {
+        Node(Asset& asset, bool isFack = false): value(asset) {
+          if(!isFack) {
+            this->connecting = make_shared<unordered_set<Node*, nodeHash, nodeEqual>>();
+            this->connected = make_shared<unordered_set<Node*, nodeHash, nodeEqual>>();
+          } else {
+//            this->connecting = shared_ptr<unordered_set<Node*, nodeHash, nodeEqual>>(nullptr);
+//            this->connected = shared_ptr<unordered_set<Node*, nodeHash, nodeEqual>>(nullptr);
+          }
+          this->usable = this->value.isAvailable();
+        }
+
+        void reset() {
           this->connecting = make_shared<unordered_set<Node*, nodeHash, nodeEqual>>();
           this->connected = make_shared<unordered_set<Node*, nodeHash, nodeEqual>>();
+        }
+        Node(Asset& asset, ll expect): value(asset) {
+          this->connecting = make_shared<unordered_set<Node*, nodeHash, nodeEqual>>(expect);
+          this->connected = make_shared<unordered_set<Node*, nodeHash, nodeEqual>>(expect);
           this->usable = this->value.isAvailable();
         }
         inline bool operator == (const Node &node) const{
@@ -87,28 +102,31 @@ public:
           return this->usable;
         }
     };
-    DAG(): count(0) {
-      this->nodes = make_unique<unordered_set<Node*, Node::nodeHash, Node::nodeEqual>>(100);
+    DAG(ll expect): count(0) {
+      this->expect = expect;
+      this->nodes = make_unique<unordered_set<Node*, Node::nodeHash, Node::nodeEqual>>(expect);
     }
 
-    DAG(shared_ptr<Asset> &asset) {
-      auto node = new Node(*asset);;
-      this->nodes = make_unique<unordered_set<Node*, Node::nodeHash, Node::nodeEqual>>(100);
+    DAG(shared_ptr<Asset> &asset, ll expect) {
+      auto node = new Node(*asset, expect);;
+      this->nodes = make_unique<unordered_set<Node*, Node::nodeHash, Node::nodeEqual>>(expect);
       this->nodes->insert(node);
       this->count = 1;
     }
-    void connect(Asset &fromAsset, Asset &toAsset) {
-      auto source = new Node(fromAsset);
-      auto dist = new Node(toAsset);
+    void connect(Asset &fromAsset, Asset &toAsset, bool evaluate = false) {
+      auto source = new Node(fromAsset, true);
+      auto dist = new Node(toAsset, true);
       auto from = this->nodes->find(source);
       auto to = this->nodes->find(dist);
       if(from == this->nodes->end()) {
+        source->reset();
         this->nodes->insert(source);
       } else {
         delete source;
         source = *from;
       }
       if(to == this->nodes->end()) {
+        dist->reset();
         this->nodes->insert(dist);
       } else {
         delete dist;
@@ -116,11 +134,14 @@ public:
       }
       source->connecting->insert(dist);
       dist->connected->insert(source);
-      source->evaluateUsableWhenChange(*dist);
+//      if(!evaluate) return;
+//      source->evaluateUsableWhenChange(*dist);
     }
-    string print(){
-      string print = "";
+    string out(){
+      time_t time1,time2;
+      time(&time1);
       set<string> sortedLines;
+      ll totalSize = 0;
       for(auto head : *this->nodes) {
         string line = "[";
         line += head->getName(false);
@@ -132,11 +153,18 @@ public:
         line += "\n";
 //        print += line;
         sortedLines.insert(line);
+        totalSize += line.length();
       }
+      time(&time2);
+      double num = difftime(time2,time1);
+//      char *print = new char[totalSize+100];
+//      print[0]='\0';
+      printf("print time: %lf\n", num);
       for(auto &line : sortedLines) {
-        print = line + print;
+        printf("%s", line.c_str());
+        // strcat(print, line.c_str());
       }
-      return print;
+      return "";
     };
     string* toJson(){
       auto print = new string("{");
@@ -154,40 +182,51 @@ public:
       return print;
     }
     int visualize(string filename) {
-      string print = "digraph {ranksep=5;splines=true;radio=auto; ";
-      set<string> sortedLines;
+      FILE *fp;
+      if((fp=fopen("export.txt","w"))==NULL) exit(1);
+//      set<char*> sortedLines;
+//      char line[100000];
+//      char from[1000];
+//      char to[1000];
+      fprintf(fp, "%s", "digraph {\nranksep=5;splines=true;radio=auto; ");
+//      strcat(print, "digraph {ranksep=5;splines=true;radio=auto; ");
       for(auto head : *this->nodes) {
-        string line = "";
-        string from = "\"";
-        from += head->getName();
-        from += "\"-> ";
+//        line[0] = '\0';
+//        strcat(from, "\"");
+//        strcat(from, head->getName().c_str());
+//        strcat(from, "\"->");
         if(!head->isUsable()){
-          line += "\"" + head->getName() + "\" " + "[style=\"filled\" color=\"red\" ];";
+          fprintf(fp, "\"%s\" -> \"%s\" [style=\"filled\" color=\"red\" ];\n", head->getName().c_str(), head->getName().c_str());
+//          strcat(line,"\"");
+//          strcat(line,head->getName().c_str());
+//          strcat(line,"\" [style=\"filled\" color=\"red\" ];");
         }
+
         for(auto node: *head->connecting){
-          string to = from + "\"";
-          to += node->getName();
-          to += "\" ";
           if(node->isUsable()) {
-            to += "[color=\"grey\",arrowhead=\"dot\", arrowsize = 0.5 ];";
+            fprintf(fp, "\"%s\" -> \"%s\" [color=\"grey\",arrowhead=\"dot\", arrowsize = 0.5 ];\n",
+                    head->getName().c_str(), node->getName().c_str());
           } else {
-            to += "[color=\"red\",arrowhead=\"dot\", arrowsize = 0.5 ];";
+            fprintf(fp, "\"%s\" -> \"%s\" [color=\"grey\",arrowhead=\"dot\", arrowsize = 0.5 ];\n",
+                    head->getName().c_str(), node->getName().c_str());
           }
-          line += to;
         }
-//        print += line;
-        sortedLines.insert(line);
       }
-      for(auto &line : sortedLines) {
-        print += line;
-      }
-      print += "}";
+      fprintf(fp, "%s", "}");
+      fclose(fp);
+      printf("generated,\n %s", print);
+      if((fp=fopen("export.txt","r"))==NULL) exit(1);
       GVC_t* gvc = gvContext();
-      Agraph_t* g = agmemread(print.c_str());
+#ifdef WITH_CGRAPH
+      Agraph_t* g = agread(fp, 0);
+#else
+      Agraph_t* g = agread(fp);
+#endif
       gvLayout(gvc, g, "twopi");
-      gvRenderFilename(gvc, g, "png", filename.c_str());
+      gvRenderFilename(gvc, g, "svg", filename.c_str());
       gvFreeLayout(gvc, g);
       agclose(g);
+      fclose(fp);
       return (gvFreeContext(gvc));
     }
     bool remove(Asset &asset) {
@@ -214,6 +253,7 @@ public:
       }
     }
 protected:
+    ll expect;
     ll count;
     unique_ptr<unordered_set<Node*, Node::nodeHash, Node::nodeEqual>> nodes;
 };
