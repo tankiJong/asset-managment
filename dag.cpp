@@ -6,6 +6,7 @@
 #include <queue>
 #include <string>
 #include <set>
+#include <thread>
 #include "asset.cpp"
 #include <gvc.h>
 // Among the dependency of assets, it's impossible to have circle. So DAG should be proper way to store such structure.
@@ -56,7 +57,7 @@ public:
               for(auto &cc: *node.first.connecting) isUsable = cc->usable && cc->value.isAvailable() && isUsable;
               node.first.usable = isUsable;
             }
-            printf("%s -> %s\n", node.first.getName().c_str(), (node.first.usable && node.second) ? "✅" : "❌");
+//            printf("%s -> %s\n", node.first.getName().c_str(), (node.first.usable && node.second) ? "✅" : "❌");
             for(auto toAdd : *node.first.connected) {
               toRefresh.push({*toAdd, node.first.usable});
             }
@@ -105,6 +106,7 @@ public:
     DAG(ll expect): count(0) {
       this->expect = expect;
       this->nodes = make_unique<unordered_set<Node*, Node::nodeHash, Node::nodeEqual>>(expect);
+      this->drawThread = thread([this] { this->_visualize();});
     }
 
     DAG(shared_ptr<Asset> &asset, ll expect) {
@@ -112,6 +114,7 @@ public:
       this->nodes = make_unique<unordered_set<Node*, Node::nodeHash, Node::nodeEqual>>(expect);
       this->nodes->insert(node);
       this->count = 1;
+      this->drawThread = thread([this] { this->_visualize();});
     }
     void connect(Asset &fromAsset, Asset &toAsset, bool evaluate = false) {
       auto source = new Node(fromAsset, true);
@@ -181,53 +184,9 @@ public:
       *print += "}";
       return print;
     }
-    int visualize(string filename) {
-      FILE *fp;
-      if((fp=fopen("export.txt","w"))==NULL) exit(1);
-//      set<char*> sortedLines;
-//      char line[100000];
-//      char from[1000];
-//      char to[1000];
-      fprintf(fp, "%s", "digraph {\nranksep=5;splines=true;radio=auto; ");
-//      strcat(print, "digraph {ranksep=5;splines=true;radio=auto; ");
-      for(auto head : *this->nodes) {
-//        line[0] = '\0';
-//        strcat(from, "\"");
-//        strcat(from, head->getName().c_str());
-//        strcat(from, "\"->");
-        if(!head->isUsable()){
-          fprintf(fp, "\"%s\" -> \"%s\" [style=\"filled\" color=\"red\" ];\n", head->getName().c_str(), head->getName().c_str());
-//          strcat(line,"\"");
-//          strcat(line,head->getName().c_str());
-//          strcat(line,"\" [style=\"filled\" color=\"red\" ];");
-        }
-
-        for(auto node: *head->connecting){
-          if(node->isUsable()) {
-            fprintf(fp, "\"%s\" -> \"%s\" [color=\"grey\",arrowhead=\"dot\", arrowsize = 0.5 ];\n",
-                    head->getName().c_str(), node->getName().c_str());
-          } else {
-            fprintf(fp, "\"%s\" -> \"%s\" [color=\"grey\",arrowhead=\"dot\", arrowsize = 0.5 ];\n",
-                    head->getName().c_str(), node->getName().c_str());
-          }
-        }
-      }
-      fprintf(fp, "%s", "}");
-      fclose(fp);
-      printf("generated,\n %s", print);
-      if((fp=fopen("export.txt","r"))==NULL) exit(1);
-      GVC_t* gvc = gvContext();
-#ifdef WITH_CGRAPH
-      Agraph_t* g = agread(fp, 0);
-#else
-      Agraph_t* g = agread(fp);
-#endif
-      gvLayout(gvc, g, "twopi");
-      gvRenderFilename(gvc, g, "svg", filename.c_str());
-      gvFreeLayout(gvc, g);
-      agclose(g);
-      fclose(fp);
-      return (gvFreeContext(gvc));
+    void visualize(string filename) {
+      this->toDraw = true;
+      this->toDrawName = filename;
     }
     bool remove(Asset &asset) {
       Node *$node = nullptr;
@@ -255,5 +214,50 @@ public:
 protected:
     ll expect;
     ll count;
+    bool toDraw = false;
+    string toDrawName;
+    Node* fakeSourceNode = nullptr;
+    Node* fakeDistNode = nullptr;
+    thread drawThread;
     unique_ptr<unordered_set<Node*, Node::nodeHash, Node::nodeEqual>> nodes;
+    int _visualize() {
+      while(1) {
+        string filename = this->toDrawName;
+        if (!this->toDraw) continue;
+        this->toDraw = false;
+        FILE *fp;
+        if ((fp = fopen("export.txt", "w")) == NULL) exit(1);
+        fprintf(fp, "%s", "digraph {\nranksep=5;splines=true;radio=auto; ");
+        for (auto head : *this->nodes) {
+          if (!head->isUsable()) {
+            fprintf(fp, "\"%s\" [style=\"filled\" color=\"red\" ];\n", head->getName().c_str());
+          }
+
+          for (auto node: *head->connecting) {
+            if (node->isUsable()) {
+              fprintf(fp, "\"%s\" -> \"%s\" [color=\"grey\",arrowhead=\"dot\", arrowsize = 0.5 ];\n",
+                      head->getName().c_str(), node->getName().c_str());
+            } else {
+              fprintf(fp, "\"%s\" -> \"%s\" [color=\"red\",arrowhead=\"dot\", arrowsize = 0.5 ];\n",
+                      head->getName().c_str(), node->getName().c_str());
+            }
+          }
+        }
+        fprintf(fp, "%s", "}");
+        fclose(fp);
+        if ((fp = fopen("export.txt", "r")) == NULL) exit(1);
+        GVC_t *gvc = gvContext();
+#ifdef WITH_CGRAPH
+        Agraph_t *g = agread(fp, 0);
+#else
+        Agraph_t* g = agread(fp);
+#endif
+        gvLayout(gvc, g, "twopi");
+        gvRenderFilename(gvc, g, "svg", filename.c_str());
+        gvFreeLayout(gvc, g);
+        agclose(g);
+        fclose(fp);
+        std::cout << "=> export to foo.svg" << std::endl;
+      }
+    }
 };

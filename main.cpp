@@ -53,9 +53,9 @@ int main(){
     exit(1);
   }
   std::cout << "Hello, World!" << std::endl;
-  char a[100], b[100];
-  time_t time1,time2;
-  time(&time1);
+  char a[100], b[100], c[100];
+//  time_t time1,time2;
+//  time(&time1);
   auto toProcess = vector<pair<string, string>>();
   while(!feof(fp)){
     fscanf(fp, "%s %s", a, b);
@@ -69,27 +69,28 @@ int main(){
 //    Asset::get(p.first);
 //    Asset::get(p.second);
   }
-  time(&time2);
-  double num = difftime(time2,time1);
-  time(&time1);
-  std::cout << "ok " << num << "\n " << toProcess.size() << std::endl;
+//  time(&time2);
+//  double num = difftime(time2,time1);
+//  time(&time1);
+//  std::cout << "ok " << num << "\n " << toProcess.size() << std::endl;
   std::cout << dag->out() << std::endl;
-  std::cout << "ok " << num << "\n " << toProcess.size() << std::endl;
-  time(&time2);
-  num = difftime(time2,time1);
-  std::cout << "ok " << num << "\n " << toProcess.size() << std::endl;
+//  std::cout << "ok " << num << "\n " << toProcess.size() << std::endl;
+//  time(&time2);
+//  num = difftime(time2,time1);
+//  std::cout << "ok " << num << "\n " << toProcess.size() << std::endl;
   dag->visualize("foo.svg");
-  std::cout << "svg ok" << std::endl;
   while(scanf("%s %s", a, b) != EOF) {
     if(!strcmp(a, "q")) return 0;
     if(!strcmp(a, "enable")) {
       updateAssetAvailableStatus(b, true, *dag);
     } else if(!strcmp(a, "disable")) {
       updateAssetAvailableStatus(b, false, *dag);
+    } else if(!strcmp(a, "connect")) {
+      scanf("%s", c);
+      dag->connect(*(Asset::get(b)), *(Asset::get(c)));
     }
     std::cout << dag->out() << std::endl;
-//     dag->visualize("foo.png");
-//     std::cout << "=> export to foo.png" << std::endl;
+     dag->visualize("foo.svg");
   }
 
   fclose(fp);

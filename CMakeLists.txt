@@ -21,7 +21,7 @@
 
 cmake_minimum_required(VERSION 3.6)
 project(util)
-
+set(EXECUTABLE_OUTPUT_PATH "bin")
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lstdc++")
 set(SOURCE_FILES asset.cpp dag.cpp)
@@ -31,3 +31,8 @@ link_directories(/usr/local/lib/graphviz)
 add_library(lib STATIC ${SOURCE_FILES})
 add_executable (util main.cpp)
 target_link_libraries(util lib gvpr gvc cgraph gvplugin_core gvplugin_dot_layout )
+add_custom_command( TARGET util
+  COMMAND echo "copy static files"
+  COMMAND cp ${PROJECT_SOURCE_DIR}/index.html ${CMAKE_BINARY_DIR}/bin/index.html
+  COMMAND cp ${PROJECT_SOURCE_DIR}/resource.txt ${CMAKE_BINARY_DIR}/bin/resource.txt
+  )
