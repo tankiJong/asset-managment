@@ -4,7 +4,8 @@
 
   you need to install gts for proper render
   On mac: `brew install --with-gts graphviz`
-
+## Demo video
+[![Demo](http://img.youtube.com/vi/T-9KVF6HpxTrU/0.jpg)](https://youtu.be/9KVF6HpxTrU)
 ## Build
 * I use CMake to build the whole project.
 * **Important**: Include & lib dir should change when run on different OS.
@@ -30,9 +31,9 @@
   
   It can be very easily proved that the whole dependency network is acyclic because interdependency will never exist. So I choose DAG as the core data structure to store the network. Using a `unordered_set` to collect all nodes of the graph, I implement a high performance DAG. The time complexity is estimated as followed (N means the total node amount of the graph):
   - insert a new Node: O(1)
-  - remove an existing node(will also remove links related): O(N)
-  - insert/remove a link between two node: O(N)
-  - find a node: O(N)
+  - remove an existing node(will also remove links related): O(1)
+  - insert/remove a link between two node: O(1)
+  - find a node: O(1)
   
   At the same time, I implemented several export format for the DAG, so that it can be easily persisted or transfered through net protocal.
   
@@ -45,7 +46,7 @@
     * environment: 13' MBP
     * Node: about 10,000
     * Edge(dependency): about 500,000
-    * Initializing time(dealing with all input from the `resource.txt`): 4s
+    * Initializing time(dealing with all input from the `resource.txt`): 2s
     * Time to process user instruction: immediate, can't feel
     * Output the processed data: immediate, cant feel
   - Visualization of the whole network.

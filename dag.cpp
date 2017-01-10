@@ -222,8 +222,8 @@ protected:
     unique_ptr<unordered_set<Node*, Node::nodeHash, Node::nodeEqual>> nodes;
     int _visualize() {
       while(1) {
-        string filename = this->toDrawName;
         if (!this->toDraw) continue;
+        string filename = this->toDrawName;
         this->toDraw = false;
         FILE *fp;
         if ((fp = fopen("export.txt", "w")) == NULL) exit(1);
