@@ -1,11 +1,11 @@
-![showcase](https://github.com/tankiJong/asset-managment/raw/develop/showcase.png)
+## Demo video
+[![Demo](https://github.com/tankiJong/asset-managment/raw/develop/showcase.png)](https://youtu.be/9KVF6HpxTrU)
+
 ## Dependency
 * Graphviz: http://www.graphviz.org/Download_source.php
 
   you need to install gts for proper render
   On mac: `brew install --with-gts graphviz`
-## Demo video
-[![Demo](http://img.youtube.com/vi/T-9KVF6HpxTrU/0.jpg)](https://youtu.be/9KVF6HpxTrU)
 ## Build
 * I use CMake to build the whole project.
 * **Important**: Include & lib dir should change when run on different OS.
