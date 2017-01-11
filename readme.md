@@ -1,4 +1,4 @@
-![showcase](https://github.com/tankiJong/asset-managment/raw/master/showcase.png)
+![showcase](https://github.com/tankiJong/asset-managment/raw/develop/showcase.png)
 ## Dependency
 * Graphviz: http://www.graphviz.org/Download_source.php
 
